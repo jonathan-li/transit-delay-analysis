@@ -1,12 +1,16 @@
+# Virtual environment
 .venv/
+
+# Python cache
 __pycache__/
 *.pyc
+
+# Environment variables
 .env
-*.sqlite3
+
+# Data
 data/raw/
 data/processed/
+
+# OS files
 .DS_Store
-E0F
-*.egg-info/
-.envrc
-.vscode/
