@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import glob
-import os
 
 st.set_page_config(page_title="BART Delay Explorer", layout="wide")
 st.title("🚇 BART Transit Delay Explorer")
@@ -12,12 +11,16 @@ files = sorted(glob.glob("data/raw/*.csv"), reverse=True)
 if not files:
     st.warning("No data found. Run `python src/ingest.py` to fetch BART data.")
 else:
-    # Collect all station names from all CSVs
+    # Load and concatenate all CSVs
     all_data = []
     for f in files:
         df = pd.read_csv(f)
         all_data.append(df)
     data = pd.concat(all_data, ignore_index=True)
+
+    # Clean data
+    data["min_till_arrival"] = data["min_till_arrival"].replace("Leaving", 0).astype(int)
+    data["fetched_at"] = pd.to_datetime(data["fetched_at"])
 
     # Let the user select a station
     stations = sorted(data["station"].unique())
@@ -29,19 +32,23 @@ else:
     st.markdown(f"### Data for **{selected_station}**")
     st.dataframe(station_data)
 
-    # Visualization: upcoming trains by destination
-    st.markdown("#### Upcoming trains by destination")
+    # --- Average wait time over time ---
+    st.markdown("#### Average wait time over time")
+    avg_wait = station_data.groupby(pd.Grouper(key="fetched_at", freq="5T"))["min_till_arrival"].mean()
+    st.line_chart(avg_wait)
+
+    # --- Top destinations by average wait ---
+    st.markdown("#### Top destinations by average wait time")
+    dest_avg = station_data.groupby("destination")["min_till_arrival"].mean().sort_values(ascending=False)
+    st.bar_chart(dest_avg)
+
+    # --- Distribution of wait times ---
+    st.markdown("#### Distribution of wait times")
+    wait_counts = station_data["min_till_arrival"].value_counts().sort_index()
+    st.bar_chart(wait_counts)
+
+    # --- Upcoming trains by destination ---
+    st.markdown("#### Upcoming trains by destination (count)")
     dest_counts = station_data["destination"].value_counts().reset_index()
     dest_counts.columns = ["destination", "count"]
     st.bar_chart(dest_counts.set_index("destination"))
-
-    # Visualization: minutes until departure distribution
-    st.markdown("#### Distribution of departure times (minutes)")
-    # Convert "minutes" column (some values might be "Leaving")
-    station_data = station_data[station_data["minutes"].apply(lambda x: str(x).isdigit())]
-    station_data["minutes"] = station_data["minutes"].astype(int)
-
-    if not station_data.empty:
-        st.line_chart(station_data.set_index("fetched_at")["minutes"])
-    else:
-        st.info("No numeric departure data available to plot.")

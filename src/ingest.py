@@ -32,10 +32,10 @@ def normalize_etd(raw_json):
                 "station": station.get("name"),
                 "abbr": station.get("abbr"),
                 "destination": etd.get("destination"),
-                "minutes": est.get("minutes"),
+                "min_till_arrival": est.get("minutes"),
                 "platform": est.get("platform"),
                 "direction": est.get("direction"),
-                "length": est.get("length"),
+                "number_of_cars": est.get("length"),
                 "fetched_at": datetime.utcnow().isoformat()
             })
     return pd.DataFrame(records)
